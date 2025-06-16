@@ -20,12 +20,15 @@ import {
   __experimentalToggleGroupControlOption,
 } from "@wordpress/components";
 import { registerCoreBlocks } from "@wordpress/block-library";
+import { dispatch, useSelect, createRegistry, RegistryProvider } from "@wordpress/data";
 
 /**
  * Internal dependencies
  */
 import "./wordpress.scss";
 import "./other.css";
+
+registerCoreBlocks();
 
 const EDITOR_MODES = {
   VISUAL: "visual",
@@ -34,43 +37,54 @@ const EDITOR_MODES = {
 };
 
 function App() {
-  const [blocks, updateBlocks] = useState([]);
   const [currentMode, setCurrentMode] = useState(EDITOR_MODES.VISUAL);
   const [htmlContent, setHtmlContent] = useState("");
   const [jsonContent, setJsonContent] = useState("");
+  const [selectedBlockIds, setSelectedBlockIds] = useState([]);
+  const [blocks, setBlocks] = useState([]);
+
+  const selectedBlocks = useSelect((select) =>
+    select("core/block-editor").getSelectedBlockClientIds()
+  , [] );
 
   useEffect(() => {
     // Override global fetch to mock WordPress API calls for specific endpoints.
     const originalFetch = window.fetch;
     window.fetch = (url, options) => {
-      if (typeof url === 'string' && (url.includes('/wp/v2/types') || url.includes('/wp/v2/taxonomies'))) {
+      if (
+        typeof url === "string" &&
+        (url.includes("/wp/v2/types") ||
+          url.includes("/wp/v2/taxonomies") ||
+          url.includes("/wp/v2/media"))
+      ) {
         console.log(`Mocking WordPress API call: ${url}`);
-        // Return an empty array as a successful response.
-        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
+        // Return an empty object as a successful response for types and taxonomies.
+        // This matches the expected JSON structure for empty collections.
+        return Promise.resolve(
+          new Response(JSON.stringify({}), { status: 200 })
+        );
       }
       // For all other requests, use the original fetch function.
       return originalFetch(url, options);
     };
 
-    registerCoreBlocks();
-
     try {
       // const parsedBlocks = parse(sampleContent);
       if (Array.isArray(jsonSampleContent)) {
-        updateBlocks(jsonSampleContent);
-        setHtmlContent(sampleContent);
+        setBlocks(jsonSampleContent);
+        setHtmlContent(serialize(jsonSampleContent));
         setJsonContent(JSON.stringify(jsonSampleContent, null, 2));
       } else {
         console.error("Parsed content is not an array:", jsonSampleContent);
-        updateBlocks([]);
+        setBlocks([]);
         setHtmlContent("");
-        setJsonContent("[]");
+        setJsonContent("");
       }
     } catch (error) {
       console.error("Error parsing raw content:", error);
-      updateBlocks([]);
+      setBlocks([]);
       setHtmlContent("");
-      setJsonContent("[]");
+      setJsonContent("");
     }
 
     // Cleanup the mocked fetch when component unmounts.
@@ -80,28 +94,15 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (currentMode === EDITOR_MODES.VISUAL) {
-      try {
-        // const parsedBlocks = parse(htmlContent);
-        if (Array.isArray(jsonSampleContent)) {
-          updateBlocks(jsonSampleContent);
-        } else {
-          console.error(
-            "Parsed content from HTML is not an array:",
-            jsonSampleContent
-          );
-          updateBlocks([]);
-        }
-      } catch (error) {
-        console.error("Error parsing HTML content:", error);
-        updateBlocks([]);
-      }
-    } else if (currentMode === EDITOR_MODES.HTML) {
-      setHtmlContent(serialize(blocks));
-    } else if (currentMode === EDITOR_MODES.JSON) {
-      setJsonContent(JSON.stringify(blocks, null, 2));
+    if (blocks.length > 0) {
+      dispatch('core/block-editor').selectBlock(blocks[0].clientId);
     }
-  }, [currentMode]); // Only re-run when mode changes
+  }, [blocks]);
+
+  useEffect(() => {
+    console.log("Selected Block IDs:", selectedBlockIds);
+    console.log("Selected Blocks (useSelect):", selectedBlocks);
+  }, [selectedBlockIds, selectedBlocks]);
 
   const handleHtmlChange = (event) => {
     setHtmlContent(event.target.value);
@@ -120,127 +121,125 @@ function App() {
       try {
         const parsedBlocks = parse(htmlContent);
         if (Array.isArray(parsedBlocks)) {
-          updateBlocks(parsedBlocks);
+          setBlocks(parsedBlocks);
           setJsonContent(JSON.stringify(parsedBlocks, null, 2));
         } else {
           console.error(
             "Parsed content from HTML is not an array:",
             parsedBlocks
           );
-          updateBlocks([]);
-          setJsonContent("[]");
+          setBlocks([]);
+          setJsonContent("");
         }
       } catch (error) {
         console.error("Error parsing HTML content:", error);
-        updateBlocks([]);
-        setJsonContent("[]");
+        setBlocks([]);
+        setJsonContent("");
       }
     } else if (currentMode === EDITOR_MODES.JSON) {
       try {
         const parsedBlocks = JSON.parse(jsonContent);
         if (Array.isArray(parsedBlocks)) {
-          updateBlocks(parsedBlocks);
+          setBlocks(parsedBlocks);
           setHtmlContent(serialize(parsedBlocks));
         } else {
           console.error(
             "Parsed content from JSON is not an array:",
             parsedBlocks
           );
-          updateBlocks([]);
+          setBlocks([]);
           setHtmlContent("");
         }
       } catch (error) {
         console.error("Error parsing JSON content:", error);
-        updateBlocks([]);
+        setBlocks([]);
         setHtmlContent("");
       }
     }
     setCurrentMode(mode);
   };
 
+  const handleInput = (newBlocks) => {
+    setBlocks(newBlocks);
+  };
+
+  const handleChange = (newBlocks) => {
+    // This is called when changes are committed, e.g., on blur or after a significant change.
+    // You might want to save the content here.
+    // For now, we'll just log it.
+    console.log("Blocks changed:", newBlocks);
+  };
+
   return (
     <div className="container">
       <div className="playground  ">
         <SlotFillProvider>
-          <div style={{ marginBottom: "10px" }}>
-            <__experimentalToggleGroupControl
-              label="Editor Mode"
-              value={currentMode}
-              onChange={setCurrentMode}
-              __next40pxDefaultSize={true}
-              __nextHasNoMarginBottom={true}
-            >
-              <__experimentalToggleGroupControlOption
-                value={EDITOR_MODES.VISUAL}
-                label="Trực quan"
+         
+            <div style={{ marginBottom: "10px" }}>
+              <__experimentalToggleGroupControl
+                label="Editor Mode"
+                value={currentMode}
+                onChange={setCurrentMode}
+                __next40pxDefaultSize={true}
+                __nextHasNoMarginBottom={true}
+              >
+                <__experimentalToggleGroupControlOption
+                  value={EDITOR_MODES.VISUAL}
+                  label="Trực quan"
+                />
+                <__experimentalToggleGroupControlOption
+                  value={EDITOR_MODES.HTML}
+                  label="HTML- Gutenburg Markup"
+                />
+                <__experimentalToggleGroupControlOption
+                  value={EDITOR_MODES.JSON}
+                  label="Gutenburg JSON"
+                />
+              </__experimentalToggleGroupControl>
+            </div>
+            {currentMode === EDITOR_MODES.HTML ? (
+              <textarea
+                style={{ width: "100%", height: "500px", padding: "10px" }}
+                value={htmlContent}
+                onChange={handleHtmlChange}
               />
-              <__experimentalToggleGroupControlOption
-                value={EDITOR_MODES.HTML}
-                label="Sửa code (HTML- Gutenburg Markup)"
+            ) : currentMode === EDITOR_MODES.JSON ? (
+              <textarea
+                style={{ width: "100%", height: "500px", padding: "10px" }}
+                value={jsonContent}
+                onChange={handleJsonChange}
               />
-              <__experimentalToggleGroupControlOption
-                value={EDITOR_MODES.JSON}
-                label="Gutenburg JSON"
-              />
-            </__experimentalToggleGroupControl>
-          </div>
-          {currentMode === EDITOR_MODES.HTML ? (
-            <textarea
-              style={{ width: "100%", height: "500px", padding: "10px" }}
-              value={htmlContent}
-              onChange={handleHtmlChange}
-            />
-          ) : currentMode === EDITOR_MODES.JSON ? (
-            <textarea
-              style={{ width: "100%", height: "500px", padding: "10px" }}
-              value={jsonContent}
-              onChange={handleJsonChange}
-            />
-          ) : (
-            <BlockEditorProvider
-              value={blocks}
-              onInput={updateBlocks}
-              onChange={updateBlocks}
-              settings={{
-                hasFixedToolbar: true,
-                focusMode: false,
-                // Disable REST API calls
-                __experimentalDisableCustomGradients: true,
-                __experimentalFeatures: {
-                  color: {
-                    gradients: false,
-                    custom: false,
-                    customGradient: false,
-                    defaultGradients: false,
-                    defaultPalette: false,
-                    duotone: false,
-                  },
-                },
-                // Disable post type fetching
-                __experimentalFetchLinkSuggestions: false,
-                __experimentalFetchReusableBlocks: false,
-                __experimentalFetchPostTypes: false,
-                __experimentalInternalBlockEditor: { postTypes: [], taxonomies: [] },
-              }}
-            >
-              {/* <div className="playground__sidebar">
-              <BlockInspector />
-              BlockInspector
-            </div> */}
-              <div className="playground__content">
-                <BlockTools className=" anmBlockTools"></BlockTools>
-                <BlockEditorKeyboardShortcuts.Register />
-                <div className="editor-styles-wrapper">
-                  <WritingFlow>
-                    <ObserveTyping>
-                      <BlockList />
-                    </ObserveTyping>
-                  </WritingFlow>
+            ) : (
+              <BlockEditorProvider
+                value={blocks}
+                onInput={handleInput}
+                onChange={handleChange}
+                onSelectionChange={setSelectedBlockIds}
+                settings={{
+                  hasFixedToolbar: true,
+                  focusMode: false,
+                  __experimentalInternalBlockEditor: { postTypes: [], taxonomies: [] },
+                }}
+              >
+                {/* <div className="playground__sidebar">
+                <BlockInspector />
+                BlockInspector
+              </div> */}
+                <div className="playground__content">
+                  <BlockTools className=" anmBlockTools">
+                    <BlockEditorKeyboardShortcuts.Register />
+                    <div className="editor-styles-wrapper">
+                      <WritingFlow>
+                        <ObserveTyping>
+                          <BlockList />
+                        </ObserveTyping>
+                      </WritingFlow>
+                    </div>
+                    <BlockEditorKeyboardShortcuts />
+                  </BlockTools>
                 </div>
-                <BlockEditorKeyboardShortcuts />
-              </div>
-            </BlockEditorProvider>
-          )}
+              </BlockEditorProvider>
+            )}
         </SlotFillProvider>
       </div>
     </div>
