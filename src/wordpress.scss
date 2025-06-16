@@ -143,3 +143,9 @@ div {
 		opacity: 1;
 	}
 }
+
+.anmBlockTools {
+	display: block !important;
+	/* visibility: visible !important; */
+	/* z-index: 9999 !important; */ /* Ensure it's on top of other elements */
+}

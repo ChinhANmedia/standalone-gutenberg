@@ -43,11 +43,10 @@ function App() {
     // Override global fetch to mock WordPress API calls for specific endpoints.
     const originalFetch = window.fetch;
     window.fetch = (url, options) => {
-      if (typeof url === 'string' && (url.includes('/wp/v2/types') || url.includes('/wp/v2/taxonomies') || url.includes('/wp/v2/media'))) {
+      if (typeof url === 'string' && (url.includes('/wp/v2/types') || url.includes('/wp/v2/taxonomies'))) {
         console.log(`Mocking WordPress API call: ${url}`);
-        // Return an empty object as a successful response for types and taxonomies.
-        // This matches the expected JSON structure for empty collections.
-        return Promise.resolve(new Response(JSON.stringify({}), { status: 200 }));
+        // Return an empty array as a successful response.
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
       }
       // For all other requests, use the original fetch function.
       return originalFetch(url, options);
