@@ -1,7 +1,7 @@
 import React from "react";
 import { parse, serialize } from "@wordpress/blocks";
 import sampleContent, { jsonSampleContent } from "./sample_data/content_sample";
-import apiFetch from "@wordpress/api-fetch";
+
 /**
  * WordPress dependencies
  */
@@ -40,14 +40,17 @@ function App() {
   const [jsonContent, setJsonContent] = useState("");
 
   useEffect(() => {
-    // Add a middleware to apiFetch to prevent 404 errors for unsupported endpoints
-    apiFetch.use(async (options, next) => {
-      if (options.path === '/wp/v2/types' || options.path === '/wp/v2/taxonomies') {
-        // Return an empty array for unsupported paths to prevent 404 errors
-        return [];
+    // Override global fetch to mock WordPress API calls for specific endpoints.
+    const originalFetch = window.fetch;
+    window.fetch = (url, options) => {
+      if (typeof url === 'string' && (url.includes('/wp/v2/types') || url.includes('/wp/v2/taxonomies'))) {
+        console.log(`Mocking WordPress API call: ${url}`);
+        // Return an empty array as a successful response.
+        return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
       }
-      return next(options);
-    });
+      // For all other requests, use the original fetch function.
+      return originalFetch(url, options);
+    };
 
     registerCoreBlocks();
 
@@ -69,6 +72,11 @@ function App() {
       setHtmlContent("");
       setJsonContent("[]");
     }
+
+    // Cleanup the mocked fetch when component unmounts.
+    return () => {
+      window.fetch = originalFetch;
+    };
   }, []);
 
   useEffect(() => {
