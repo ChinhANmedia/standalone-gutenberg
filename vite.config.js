@@ -12,5 +12,12 @@ export default defineConfig({
   },
   define: {
     'process.env': process.env,
-  }
+  },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@use "sass:math" as math;`,
+      },
+    },
+  },
 })
