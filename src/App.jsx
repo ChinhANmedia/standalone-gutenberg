@@ -59,7 +59,6 @@ function App() {
           url.includes("/wp/v2/taxonomies") ||
           url.includes("/wp/v2/media"))
       ) {
-        console.log(`Mocking WordPress API call: ${url}`);
         // Return an empty object as a successful response for types and taxonomies.
         // This matches the expected JSON structure for empty collections.
         return Promise.resolve(
@@ -102,8 +101,6 @@ function App() {
   }, [blocks]);
 
   useEffect(() => {
-    console.log("Selected Block IDs:", selectedBlockIds);
-    console.log("Selected Blocks (useSelect):", selectedBlocks);
   }, [selectedBlockIds, selectedBlocks]);
 
   const handleHtmlChange = (event) => {
@@ -169,7 +166,6 @@ function App() {
     // This is called when changes are committed, e.g., on blur or after a significant change.
     // You might want to save the content here.
     // For now, we'll just log it.
-    console.log("Blocks changed:", newBlocks);
   };
 
   return (
@@ -181,7 +177,7 @@ function App() {
               <__experimentalToggleGroupControl
                 label="Editor Mode"
                 value={currentMode}
-                onChange={setCurrentMode}
+                onChange={(mode) => setMode(mode)()}
                 __next40pxDefaultSize={true}
                 __nextHasNoMarginBottom={true}
               >
