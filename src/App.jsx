@@ -18,9 +18,11 @@ import {
   SlotFillProvider,
   __experimentalToggleGroupControl,
   __experimentalToggleGroupControlOption,
+  Popover,
 } from "@wordpress/components";
 import { registerCoreBlocks } from "@wordpress/block-library";
 import { dispatch, useSelect, createRegistry, RegistryProvider } from "@wordpress/data";
+import "@wordpress/format-library";
 
 /**
  * Internal dependencies
@@ -212,32 +214,23 @@ function App() {
             ) : (
               <BlockEditorProvider
                 value={blocks}
-                onInput={handleInput}
-                onChange={handleChange}
-                onSelectionChange={setSelectedBlockIds}
-                settings={{
-                  hasFixedToolbar: true,
-                  focusMode: false,
-                  __experimentalInternalBlockEditor: { postTypes: [], taxonomies: [] },
-                }}
+                onInput={setBlocks}
+                onChange={setBlocks}
               >
-                {/* <div className="playground__sidebar">
-                <BlockInspector />
-                BlockInspector
-              </div> */}
                 <div className="playground__content">
-                  <BlockTools className=" anmBlockTools">
-                    <BlockEditorKeyboardShortcuts.Register />
-                    <div className="editor-styles-wrapper">
-                      <WritingFlow>
-                        <ObserveTyping>
+                  <BlockEditorKeyboardShortcuts.Register />
+                  <BlockEditorKeyboardShortcuts />
+                  <div className="editor-styles-wrapper">
+                    <WritingFlow>
+                      <ObserveTyping>
+                        <BlockTools className=" anmBlockTools">
                           <BlockList />
-                        </ObserveTyping>
-                      </WritingFlow>
-                    </div>
-                    <BlockEditorKeyboardShortcuts />
-                  </BlockTools>
+                        </BlockTools>
+                      </ObserveTyping>
+                    </WritingFlow>
+                  </div>
                 </div>
+                <Popover.Slot />
               </BlockEditorProvider>
             )}
         </SlotFillProvider>
