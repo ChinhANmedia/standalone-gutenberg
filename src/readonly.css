@@ -1,0 +1,20 @@
+/* test-standalone-gutenburg/src/readonly.css */
+
+.read-only-content {
+  /* Disable all pointer events (clicks, hovers, etc.) */
+  pointer-events: none;
+  /* Disable text selection */
+  user-select: none;
+  /* Optionally, for older browsers */
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* IE/Edge */
+}
+
+.read-only-content * {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+} 

@@ -18,9 +18,11 @@ import {
   SlotFillProvider,
   __experimentalToggleGroupControl,
   __experimentalToggleGroupControlOption,
+  Popover,
 } from "@wordpress/components";
 import { registerCoreBlocks } from "@wordpress/block-library";
 import { dispatch, useSelect, createRegistry, RegistryProvider } from "@wordpress/data";
+import "@wordpress/format-library";
 
 /**
  * Internal dependencies
@@ -41,8 +43,11 @@ function App() {
   const [htmlContent, setHtmlContent] = useState("");
   const [jsonContent, setJsonContent] = useState("");
   const [selectedBlockIds, setSelectedBlockIds] = useState([]);
-  const [registry] = useState(() => createRegistry());
   const [blocks, setBlocks] = useState([]);
+
+  const selectedBlocks = useSelect((select) =>
+    select("core/block-editor").getSelectedBlockClientIds()
+  , [] );
 
   useEffect(() => {
     // Override global fetch to mock WordPress API calls for specific endpoints.
@@ -54,7 +59,6 @@ function App() {
           url.includes("/wp/v2/taxonomies") ||
           url.includes("/wp/v2/media"))
       ) {
-        console.log(`Mocking WordPress API call: ${url}`);
         // Return an empty object as a successful response for types and taxonomies.
         // This matches the expected JSON structure for empty collections.
         return Promise.resolve(
@@ -66,13 +70,13 @@ function App() {
     };
 
     try {
-      const parsedBlocks = parse(sampleContent);
-      if (Array.isArray(parsedBlocks)) {
-        setBlocks(parsedBlocks);
-        setHtmlContent(sampleContent);
-        setJsonContent(JSON.stringify(parsedBlocks, null, 2));
+      // const parsedBlocks = parse(sampleContent);
+      if (Array.isArray(jsonSampleContent)) {
+        setBlocks(jsonSampleContent);
+        setHtmlContent(serialize(jsonSampleContent));
+        setJsonContent(JSON.stringify(jsonSampleContent, null, 2));
       } else {
-        console.error("Parsed content is not an array:", parsedBlocks);
+        console.error("Parsed content is not an array:", jsonSampleContent);
         setBlocks([]);
         setHtmlContent("");
         setJsonContent("");
@@ -91,8 +95,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    console.log("Selected Block IDs:", selectedBlockIds);
-  }, [selectedBlockIds]);
+    if (blocks.length > 0) {
+      dispatch('core/block-editor').selectBlock(blocks[0].clientId);
+    }
+  }, [blocks]);
+
+  useEffect(() => {
+  }, [selectedBlockIds, selectedBlocks]);
 
   const handleHtmlChange = (event) => {
     setHtmlContent(event.target.value);
@@ -157,19 +166,18 @@ function App() {
     // This is called when changes are committed, e.g., on blur or after a significant change.
     // You might want to save the content here.
     // For now, we'll just log it.
-    console.log("Blocks changed:", newBlocks);
   };
 
   return (
     <div className="container">
       <div className="playground  ">
         <SlotFillProvider>
-          <RegistryProvider value={registry}>
+         
             <div style={{ marginBottom: "10px" }}>
               <__experimentalToggleGroupControl
                 label="Editor Mode"
                 value={currentMode}
-                onChange={setCurrentMode}
+                onChange={(mode) => setMode(mode)()}
                 __next40pxDefaultSize={true}
                 __nextHasNoMarginBottom={true}
               >
@@ -202,59 +210,25 @@ function App() {
             ) : (
               <BlockEditorProvider
                 value={blocks}
-                onInput={handleInput}
-                onChange={handleChange}
-                onSelectionChange={setSelectedBlockIds}
-                settings={{
-                  hasFixedToolbar: true,
-                  focusMode: false,
-                  // Disable REST API calls
-                  __experimentalDisableCustomGradients: true,
-                  __experimentalFeatures: {
-                    color: {
-                      gradients: false,
-                      custom: false,
-                      customGradient: false,
-                      defaultGradients: false,
-                      defaultPalette: false,
-                      duotone: false,
-                    },
-                  },
-                  // Disable post type fetching
-                  __experimentalFetchLinkSuggestions: false,
-                  __experimentalFetchReusableBlocks: false,
-                  __experimentalFetchPostTypes: false,
-                  __experimentalInternalBlockEditor: { postTypes: [], taxonomies: [] },
-                  // Add new settings to disable more API calls
-                  __experimentalDisableMediaUpload: true,
-                  __experimentalDisablePatterns: true,
-                  __experimentalDisableCustomColors: true,
-                  __experimentalDisableCustomFontSizes: true,
-                  __experimentalDisableCustomSpacing: true,
-                  __experimentalBlockPatterns: [],
-                  __experimentalBlockPatternCategories: [],
-                }}
+                onInput={setBlocks}
+                onChange={setBlocks}
               >
-                {/* <div className="playground__sidebar">
-                <BlockInspector />
-                BlockInspector
-              </div> */}
-                <div className="playground__content" onClick={() => console.log('Click on editor content')}>
-                  <BlockTools>
-                    <BlockEditorKeyboardShortcuts.Register />
-                    <div className="editor-styles-wrapper">
-                      <WritingFlow>
-                        <ObserveTyping>
+                <div className="playground__content">
+                  <BlockEditorKeyboardShortcuts.Register />
+                  <BlockEditorKeyboardShortcuts />
+                  <div className="editor-styles-wrapper">
+                    <WritingFlow>
+                      <ObserveTyping>
+                        <BlockTools className=" anmBlockTools">
                           <BlockList />
-                        </ObserveTyping>
-                      </WritingFlow>
-                    </div>
-                    <BlockEditorKeyboardShortcuts />
-                  </BlockTools>
+                        </BlockTools>
+                      </ObserveTyping>
+                    </WritingFlow>
+                  </div>
                 </div>
+                <Popover.Slot />
               </BlockEditorProvider>
             )}
-          </RegistryProvider>
         </SlotFillProvider>
       </div>
     </div>

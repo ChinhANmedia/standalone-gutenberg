@@ -13,6 +13,7 @@ import {
   BlockTools,
   WritingFlow,
   ObserveTyping,
+  BlockPreview,
 } from "@wordpress/block-editor";
 import {
   SlotFillProvider,
@@ -29,6 +30,7 @@ import "@wordpress/format-library";
  */
 import "./wordpress.scss";
 import "./other.css";
+import "./readonly.css";
 
 registerCoreBlocks();
 
@@ -44,6 +46,7 @@ function App() {
   const [jsonContent, setJsonContent] = useState("");
   const [selectedBlockIds, setSelectedBlockIds] = useState([]);
   const [blocks, setBlocks] = useState([]);
+  const [originalContent, setOriginalContent] = useState("");
 
   const selectedBlocks = useSelect((select) =>
     select("core/block-editor").getSelectedBlockClientIds()
@@ -75,17 +78,20 @@ function App() {
         setBlocks(jsonSampleContent);
         setHtmlContent(serialize(jsonSampleContent));
         setJsonContent(JSON.stringify(jsonSampleContent, null, 2));
+        setOriginalContent(serialize(jsonSampleContent));
       } else {
         console.error("Parsed content is not an array:", jsonSampleContent);
         setBlocks([]);
         setHtmlContent("");
         setJsonContent("");
+        setOriginalContent("");
       }
     } catch (error) {
       console.error("Error parsing raw content:", error);
       setBlocks([]);
       setHtmlContent("");
       setJsonContent("");
+      setOriginalContent("");
     }
 
     // Cleanup the mocked fetch when component unmounts.
@@ -171,7 +177,6 @@ function App() {
   return (
     <div className="container">
       <div className="playground  ">
-        <SlotFillProvider>
          
             <div style={{ marginBottom: "10px" }}>
               <__experimentalToggleGroupControl
@@ -195,6 +200,11 @@ function App() {
                 />
               </__experimentalToggleGroupControl>
             </div>
+            <h3 style={{ marginTop: "20px", marginBottom: "10px" }}>Original Content (Read-Only Visual)</h3>
+            <div
+              dangerouslySetInnerHTML={{ __html: originalContent }}
+            />
+
             {currentMode === EDITOR_MODES.HTML ? (
               <textarea
                 style={{ width: "100%", height: "500px", padding: "10px" }}
@@ -208,6 +218,7 @@ function App() {
                 onChange={handleJsonChange}
               />
             ) : (
+              <SlotFillProvider>
               <BlockEditorProvider
                 value={blocks}
                 onInput={setBlocks}
@@ -228,8 +239,8 @@ function App() {
                 </div>
                 <Popover.Slot />
               </BlockEditorProvider>
+              </SlotFillProvider>
             )}
-        </SlotFillProvider>
       </div>
     </div>
   );
